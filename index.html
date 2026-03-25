@@ -2,39 +2,39 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Air Writing MVP - Controlled Mode</title>
+  <title>Air Writing MVP - Calibrated</title>
 
   <style>
     body {
       text-align: center;
-      font-family: Arial, sans-serif;
+      font-family: Arial;
       background: #f5f5f5;
     }
 
     button {
-      padding: 10px 15px;
+      padding: 10px;
       margin: 5px;
       font-size: 16px;
-      border: none;
-      border-radius: 5px;
       background: #007bff;
       color: white;
+      border: none;
+      border-radius: 5px;
     }
 
     canvas {
       border: 2px solid black;
       margin-top: 10px;
       background: white;
-      touch-action: none;
     }
   </style>
 </head>
 
 <body>
 
-<h3>Air Writing MVP (Controlled Mode)</h3>
+<h3>Air Writing MVP (Calibrated Mode)</h3>
 
 <button onclick="enableMotion()">Enable Motion</button>
+<button onclick="calibrate()">Calibrate</button>
 <button onclick="clearCanvas()">Clear</button>
 
 <br>
@@ -45,93 +45,98 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// Cursor position
 let x = canvas.width / 2;
 let y = canvas.height / 2;
 
-// Drawing state
 let isDrawing = false;
-
-// Path
 let path = [];
 
-// Motion smoothing
+// Calibration baseline
+let baseBeta = 0;
+let baseGamma = 0;
+
+// Smoothing
 let smoothDX = 0;
 let smoothDY = 0;
 const alpha = 0.2;
 
-// Draw everything
 function drawScene() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Draw path
+  // draw path
   if (path.length > 0) {
     ctx.beginPath();
-    for (let i = 0; i < path.length; i++) {
-      const p = path[i];
+    path.forEach((p, i) => {
       if (i === 0) ctx.moveTo(p.x, p.y);
       else ctx.lineTo(p.x, p.y);
-    }
+    });
     ctx.stroke();
   }
 
-  // Draw cursor
+  // draw cursor
   ctx.beginPath();
   ctx.arc(x, y, 5, 0, Math.PI * 2);
   ctx.fillStyle = "red";
   ctx.fill();
 }
 
-// Start drawing (finger down)
+// Touch controls
 canvas.addEventListener("touchstart", () => {
   isDrawing = true;
-  path.push({ x, y });
 });
 
-// Stop drawing (finger up)
 canvas.addEventListener("touchend", () => {
   isDrawing = false;
 });
 
-// Clear canvas
+// Clear
 function clearCanvas() {
   path = [];
   drawScene();
 }
 
-// Enable motion (iPhone requirement)
+// Enable motion
 function enableMotion() {
   if (typeof DeviceMotionEvent.requestPermission === "function") {
-    DeviceMotionEvent.requestPermission().then(response => {
-      if (response === "granted") {
-        startMotion();
-      } else {
-        alert("Permission denied");
-      }
+    DeviceMotionEvent.requestPermission().then(res => {
+      if (res === "granted") startMotion();
     });
   } else {
     startMotion();
   }
 }
 
-// Motion logic
+// Calibrate baseline
+function calibrate() {
+  alert("Hold phone still and tap OK");
+  baseBeta = lastBeta;
+  baseGamma = lastGamma;
+}
+
+// Track latest rotation
+let lastBeta = 0;
+let lastGamma = 0;
+
 function startMotion() {
   window.addEventListener("devicemotion", (event) => {
     const rot = event.rotationRate;
     if (!rot) return;
 
-    let dx = rot.gamma * 0.2;
-    let dy = rot.beta * 0.2;
+    lastBeta = rot.beta || 0;
+    lastGamma = rot.gamma || 0;
+
+    // Relative movement
+    let dx = (lastGamma - baseGamma) * 0.05;
+    let dy = (lastBeta - baseBeta) * 0.05;
 
     // Dead zone
-    if (Math.abs(dx) < 0.05) dx = 0;
-    if (Math.abs(dy) < 0.05) dy = 0;
+    if (Math.abs(dx) < 0.01) dx = 0;
+    if (Math.abs(dy) < 0.01) dy = 0;
 
     // Smooth
     smoothDX = alpha * dx + (1 - alpha) * smoothDX;
     smoothDY = alpha * dy + (1 - alpha) * smoothDY;
 
-    // Update cursor
     x += smoothDX * 10;
     y += smoothDY * 10;
 
@@ -139,7 +144,6 @@ function startMotion() {
     x = Math.max(0, Math.min(canvas.width, x));
     y = Math.max(0, Math.min(canvas.height, y));
 
-    // Draw continuously if finger is down
     if (isDrawing) {
       path.push({ x, y });
     }
@@ -148,7 +152,6 @@ function startMotion() {
   });
 }
 
-// Initial render
 drawScene();
 </script>
 
