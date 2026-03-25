@@ -2,17 +2,13 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Air Writing MVP</title>
+  <title>Air Writing MVP - Controlled Mode</title>
 
   <style>
     body {
       text-align: center;
       font-family: Arial, sans-serif;
       background: #f5f5f5;
-    }
-
-    h3 {
-      margin-top: 10px;
     }
 
     button {
@@ -36,10 +32,9 @@
 
 <body>
 
-<h3>Air Writing MVP</h3>
+<h3>Air Writing MVP (Controlled Mode)</h3>
 
 <button onclick="enableMotion()">Enable Motion</button>
-<button onclick="toggleDraw()">Toggle Draw</button>
 <button onclick="clearCanvas()">Clear</button>
 
 <br>
@@ -50,47 +45,61 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
+// Cursor position
 let x = canvas.width / 2;
 let y = canvas.height / 2;
 
-ctx.beginPath();
-ctx.moveTo(x, y);
+// Drawing state
+let isDrawing = false;
 
-// Drawing control
-let isDrawing = true;
+// Path
+let path = [];
 
-// Motion tracking
-let lastX = 0;
-let lastY = 0;
-
-// Smoothed movement
+// Motion smoothing
 let smoothDX = 0;
 let smoothDY = 0;
+const alpha = 0.2;
 
-// Tuning parameters
-const alpha = 0.2;      // smoothing (lower = smoother)
-const sensitivity = 5;  // movement speed
-
-function draw(x, y) {
-  ctx.lineTo(x, y);
-  ctx.stroke();
-}
-
-function toggleDraw() {
-  isDrawing = !isDrawing;
-
-  if (isDrawing) {
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  }
-}
-
-function clearCanvas() {
+// Draw everything
+function drawScene() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw path
+  if (path.length > 0) {
+    ctx.beginPath();
+    for (let i = 0; i < path.length; i++) {
+      const p = path[i];
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+  }
+
+  // Draw cursor
   ctx.beginPath();
-  ctx.moveTo(x, y);
+  ctx.arc(x, y, 5, 0, Math.PI * 2);
+  ctx.fillStyle = "red";
+  ctx.fill();
 }
 
+// Start drawing (finger down)
+canvas.addEventListener("touchstart", () => {
+  isDrawing = true;
+  path.push({ x, y });
+});
+
+// Stop drawing (finger up)
+canvas.addEventListener("touchend", () => {
+  isDrawing = false;
+});
+
+// Clear canvas
+function clearCanvas() {
+  path = [];
+  drawScene();
+}
+
+// Enable motion (iPhone requirement)
 function enableMotion() {
   if (typeof DeviceMotionEvent.requestPermission === "function") {
     DeviceMotionEvent.requestPermission().then(response => {
@@ -105,33 +114,24 @@ function enableMotion() {
   }
 }
 
+// Motion logic
 function startMotion() {
   window.addEventListener("devicemotion", (event) => {
     const rot = event.rotationRate;
     if (!rot) return;
 
-    let dx = rot.beta;   // forward/back
-    let dy = rot.gamma;  // left/right
+    let dx = rot.gamma * 0.2;
+    let dy = rot.beta * 0.2;
 
-    // 👉 Step 1: Normalize
-    dx *= 0.3;
-    dy *= 0.3;
+    // Dead zone
+    if (Math.abs(dx) < 0.05) dx = 0;
+    if (Math.abs(dy) < 0.05) dy = 0;
 
-    // 👉 Step 2: Dead Zone (ignore small movement)
-    const DEAD_ZONE = 0.2;
-
-    if (Math.abs(dx) < DEAD_ZONE) dx = 0;
-    if (Math.abs(dy) < DEAD_ZONE) dy = 0;
-
-    // 👉 Step 3: Non-linear boost (better control)
-    dx = Math.sign(dx) * dx * dx;
-    dy = Math.sign(dy) * dy * dy;
-
-    // 👉 Step 4: Smooth
+    // Smooth
     smoothDX = alpha * dx + (1 - alpha) * smoothDX;
     smoothDY = alpha * dy + (1 - alpha) * smoothDY;
 
-    // 👉 Step 5: Update
+    // Update cursor
     x += smoothDX * 10;
     y += smoothDY * 10;
 
@@ -139,12 +139,17 @@ function startMotion() {
     x = Math.max(0, Math.min(canvas.width, x));
     y = Math.max(0, Math.min(canvas.height, y));
 
+    // Draw continuously if finger is down
     if (isDrawing) {
-      draw(x, y);
+      path.push({ x, y });
     }
+
+    drawScene();
   });
 }
 
+// Initial render
+drawScene();
 </script>
 
 </body>
