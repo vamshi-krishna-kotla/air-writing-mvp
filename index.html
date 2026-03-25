@@ -104,18 +104,14 @@ function enableMotion() {
     startMotion();
   }
 }
-
 function startMotion() {
   window.addEventListener("devicemotion", (event) => {
-    const acc = event.accelerationIncludingGravity;
-    if (!acc) return;
+    const rotation = event.rotationRate;
+    if (!rotation) return;
 
-    // Calculate movement
-    let dx = (acc.x - lastX) * sensitivity;
-    let dy = (acc.y - lastY) * sensitivity;
-
-    lastX = acc.x;
-    lastY = acc.y;
+    // Use rotation instead of acceleration
+    let dx = rotation.gamma * 0.5; // left/right tilt
+    let dy = rotation.beta * 0.5;  // forward/back tilt
 
     // Apply smoothing
     smoothDX = alpha * dx + (1 - alpha) * smoothDX;
@@ -125,16 +121,17 @@ function startMotion() {
     x += smoothDX;
     y += smoothDY;
 
-    // Keep inside canvas
+    // Clamp inside canvas
     x = Math.max(0, Math.min(canvas.width, x));
     y = Math.max(0, Math.min(canvas.height, y));
 
-    // Draw if enabled
+    // Draw
     if (isDrawing) {
       draw(x, y);
     }
   });
 }
+
 </script>
 
 </body>
