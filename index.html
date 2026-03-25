@@ -1,12 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Writing MVP</title>
+  <title>Air Writing MVP</title>
+  <style>
+    body { text-align: center; }
+    canvas {
+      border: 1px solid black;
+      touch-action: none;
+    }
+  </style>
 </head>
 <body>
-    <h1>Welcome to Air Writing MVP</h1>
-    <p>This is the index page.</p>
+
+<h3>Air Writing Test</h3>
+<button onclick="enableMotion()">Enable Motion</button>
+<br><br>
+
+<canvas id="canvas" width="300" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let x = 150;
+let y = 200;
+
+ctx.beginPath();
+ctx.moveTo(x, y);
+
+function draw(x, y) {
+  ctx.lineTo(x, y);
+  ctx.stroke();
+}
+
+function enableMotion() {
+  if (typeof DeviceMotionEvent.requestPermission === "function") {
+    DeviceMotionEvent.requestPermission().then(response => {
+      if (response === "granted") {
+        startMotion();
+      } else {
+        alert("Permission denied");
+      }
+    });
+  } else {
+    startMotion();
+  }
+}
+
+function startMotion() {
+  window.addEventListener("devicemotion", (event) => {
+    const acc = event.accelerationIncludingGravity;
+
+    if (!acc) return;
+
+    x += acc.x * 2;
+    y += acc.y * 2;
+
+    draw(x, y);
+  });
+}
+</script>
+
 </body>
 </html>
