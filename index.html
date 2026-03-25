@@ -106,12 +106,24 @@ function enableMotion() {
 }
 function startMotion() {
   window.addEventListener("devicemotion", (event) => {
-    const rotation = event.rotationRate;
-    if (!rotation) return;
+    const rot = event.rotationRate;
+    if (!rot) return;
 
-    // Use rotation instead of acceleration
-    let dx = rotation.gamma * 0.5; // left/right tilt
-    let dy = rotation.beta * 0.5;  // forward/back tilt
+    // Raw rotation
+    let rawX = rot.gamma; // left/right tilt
+    let rawY = rot.beta;  // forward/back tilt
+
+    // ✅ FIX 1: Swap axes to match screen feel
+    let dx = rawY;   // forward/back → horizontal
+    let dy = rawX;   // left/right → vertical
+
+    // ✅ FIX 2: Normalize sensitivity
+    dx *= 0.4;
+    dy *= 0.4;
+
+    // ✅ FIX 3: Dead zone (ignore small noise)
+    if (Math.abs(dx) < 0.1) dx = 0;
+    if (Math.abs(dy) < 0.1) dy = 0;
 
     // Apply smoothing
     smoothDX = alpha * dx + (1 - alpha) * smoothDX;
@@ -121,11 +133,10 @@ function startMotion() {
     x += smoothDX;
     y += smoothDY;
 
-    // Clamp inside canvas
+    // Clamp
     x = Math.max(0, Math.min(canvas.width, x));
     y = Math.max(0, Math.min(canvas.height, y));
 
-    // Draw
     if (isDrawing) {
       draw(x, y);
     }
