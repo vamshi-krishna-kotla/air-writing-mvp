@@ -47,18 +47,35 @@ function enableMotion() {
   }
 }
 
-function startMotion() {
+  function startMotion() {
+  let lastX = 0;
+  let lastY = 0;
+
   window.addEventListener("devicemotion", (event) => {
     const acc = event.accelerationIncludingGravity;
 
     if (!acc) return;
 
-    x += acc.x * 2;
-    y += acc.y * 2;
+    // Calculate delta movement
+    const dx = (acc.x - lastX) * 15;
+    const dy = (acc.y - lastY) * 15;
 
+    lastX = acc.x;
+    lastY = acc.y;
+
+    // Update position
+    x += dx;
+    y += dy;
+
+    // ✅ CLAMP HERE (IMPORTANT)
+    x = Math.max(0, Math.min(canvas.width, x));
+    y = Math.max(0, Math.min(canvas.height, y));
+
+    // Draw after clamping
     draw(x, y);
   });
 }
+
 </script>
 
 </body>
