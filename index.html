@@ -1,20 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Air Writing MVP</title>
+
   <style>
-    body { text-align: center; }
+    body {
+      text-align: center;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+    }
+
+    h3 {
+      margin-top: 10px;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background: #007bff;
+      color: white;
+    }
+
     canvas {
-      border: 1px solid black;
+      border: 2px solid black;
+      margin-top: 10px;
+      background: white;
       touch-action: none;
     }
   </style>
 </head>
+
 <body>
 
-<h3>Air Writing Test</h3>
+<h3>Air Writing MVP</h3>
+
 <button onclick="enableMotion()">Enable Motion</button>
-<br><br>
+<button onclick="toggleDraw()">Toggle Draw</button>
+<button onclick="clearCanvas()">Clear</button>
+
+<br>
 
 <canvas id="canvas" width="300" height="400"></canvas>
 
@@ -22,15 +50,45 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-let x = 150;
-let y = 200;
+let x = canvas.width / 2;
+let y = canvas.height / 2;
 
 ctx.beginPath();
 ctx.moveTo(x, y);
 
+// Drawing control
+let isDrawing = true;
+
+// Motion tracking
+let lastX = 0;
+let lastY = 0;
+
+// Smoothed movement
+let smoothDX = 0;
+let smoothDY = 0;
+
+// Tuning parameters
+const alpha = 0.2;      // smoothing (lower = smoother)
+const sensitivity = 5;  // movement speed
+
 function draw(x, y) {
   ctx.lineTo(x, y);
   ctx.stroke();
+}
+
+function toggleDraw() {
+  isDrawing = !isDrawing;
+
+  if (isDrawing) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  }
+}
+
+function clearCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.beginPath();
+  ctx.moveTo(x, y);
 }
 
 function enableMotion() {
@@ -47,35 +105,36 @@ function enableMotion() {
   }
 }
 
-  function startMotion() {
-  let lastX = 0;
-  let lastY = 0;
-
+function startMotion() {
   window.addEventListener("devicemotion", (event) => {
     const acc = event.accelerationIncludingGravity;
-
     if (!acc) return;
 
-    // Calculate delta movement
-    const dx = (acc.x - lastX) * 15;
-    const dy = (acc.y - lastY) * 15;
+    // Calculate movement
+    let dx = (acc.x - lastX) * sensitivity;
+    let dy = (acc.y - lastY) * sensitivity;
 
     lastX = acc.x;
     lastY = acc.y;
 
-    // Update position
-    x += dx;
-    y += dy;
+    // Apply smoothing
+    smoothDX = alpha * dx + (1 - alpha) * smoothDX;
+    smoothDY = alpha * dy + (1 - alpha) * smoothDY;
 
-    // ✅ CLAMP HERE (IMPORTANT)
+    // Update position
+    x += smoothDX;
+    y += smoothDY;
+
+    // Keep inside canvas
     x = Math.max(0, Math.min(canvas.width, x));
     y = Math.max(0, Math.min(canvas.height, y));
 
-    // Draw after clamping
-    draw(x, y);
+    // Draw if enabled
+    if (isDrawing) {
+      draw(x, y);
+    }
   });
 }
-
 </script>
 
 </body>
