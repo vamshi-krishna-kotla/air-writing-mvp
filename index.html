@@ -104,34 +104,36 @@ function enableMotion() {
     startMotion();
   }
 }
+
 function startMotion() {
   window.addEventListener("devicemotion", (event) => {
     const rot = event.rotationRate;
     if (!rot) return;
 
-    // Raw rotation
-    let rawX = rot.gamma; // left/right tilt
-    let rawY = rot.beta;  // forward/back tilt
+    let dx = rot.beta;   // forward/back
+    let dy = rot.gamma;  // left/right
 
-    // ✅ FIX 1: Swap axes to match screen feel
-    let dx = rawY;   // forward/back → horizontal
-    let dy = rawX;   // left/right → vertical
+    // 👉 Step 1: Normalize
+    dx *= 0.3;
+    dy *= 0.3;
 
-    // ✅ FIX 2: Normalize sensitivity
-    dx *= 0.4;
-    dy *= 0.4;
+    // 👉 Step 2: Dead Zone (ignore small movement)
+    const DEAD_ZONE = 0.2;
 
-    // ✅ FIX 3: Dead zone (ignore small noise)
-    if (Math.abs(dx) < 0.1) dx = 0;
-    if (Math.abs(dy) < 0.1) dy = 0;
+    if (Math.abs(dx) < DEAD_ZONE) dx = 0;
+    if (Math.abs(dy) < DEAD_ZONE) dy = 0;
 
-    // Apply smoothing
+    // 👉 Step 3: Non-linear boost (better control)
+    dx = Math.sign(dx) * dx * dx;
+    dy = Math.sign(dy) * dy * dy;
+
+    // 👉 Step 4: Smooth
     smoothDX = alpha * dx + (1 - alpha) * smoothDX;
     smoothDY = alpha * dy + (1 - alpha) * smoothDY;
 
-    // Update position
-    x += smoothDX;
-    y += smoothDY;
+    // 👉 Step 5: Update
+    x += smoothDX * 10;
+    y += smoothDY * 10;
 
     // Clamp
     x = Math.max(0, Math.min(canvas.width, x));
